@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>طلبات الإصلاح والصيانة - شموع الماضي | Maintenance Requests</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f6e56">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --brand-dark:#0b3d2e;
+    --brand:#0f6e56;
+    --brand-light:#e1f5ee;
+    --accent:#d97706;
+    --bg:#f4f6f5;
+    --card:#ffffff;
+    --border:#dfe3e1;
+    --text:#1f2a27;
+    --muted:#6b7570;
+    --danger:#c0392b;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', Tahoma, Arial, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+  }
+  /* ---------------- شاشة كلمة السر ---------------- */
+  #lockScreen{
+    position:fixed; inset:0; background:var(--brand-dark);
+    display:flex; align-items:center; justify-content:center; z-index:999;
+    flex-direction:column; gap:16px; padding:20px;
+  }
+  #lockScreen .lock-header{
+    display:flex; align-items:center; justify-content:space-between;
+    width:100%; max-width:320px; margin-bottom:2px;
+  }
+  #lockScreen .lock-brand-name{font-size:16px; font-weight:700; color:#fff;}
+  #lockScreen .lock-brand-sub{font-size:10px; color:#cfe4dc; margin-top:2px;}
+  #lockScreen .lock-logo img{height:64px; width:64px; object-fit:contain; border-radius:8px; display:block;}
+  #lockScreen .lock-designer{
+    font-size:12px; font-weight:800; color:#000; background:#fff;
+    padding:6px 14px; border-radius:6px; width:100%; max-width:320px; text-align:center;
+  }
+  #lockScreen .box{
+    background:var(--card); border-radius:var(--radius); padding:28px 24px;
+    width:100%; max-width:320px; text-align:center; box-shadow:0 8px 30px rgba(0,0,0,.25);
+  }
+  #lockScreen h2{margin:0 0 6px; font-size:18px; color:var(--brand-dark);}
+  #lockScreen p{margin:0 0 16px; font-size:13px; color:var(--muted);}
+  #lockScreen input{
+    width:100%; padding:12px; font-size:16px; border:1px solid var(--border);
+    border-radius:8px; text-align:center; margin-bottom:12px;
+  }
+  #lockScreen button{
+    width:100%; padding:12px; background:var(--brand); color:#fff; border:none;
+    border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;
+  }
+  #lockScreen button:active{opacity:.85;}
+  #lockError{color:#ffd7d2; font-size:12px; min-height:16px;}
+
+  /* ---------------- هيدر ---------------- */
+  header{
+    background:var(--card); border-bottom:1px solid var(--border);
+    padding:14px 18px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .brand-name{font-size:17px; font-weight:700; color:var(--brand-dark);}
+  .brand-sub{font-size:11px; color:var(--muted); margin-top:2px;}
+  header .logo-slot img{height:48px; width:48px; display:block; object-fit:contain; border-radius:6px;}
+  .designer-line{
+    text-align:center; font-size:11px; color:var(--muted); padding:6px 0 10px;
+    background:var(--card); border-bottom:1px solid var(--border);
+  }
+  .app-title{
+    text-align:center; padding:14px 10px 6px; font-size:19px; font-weight:700; color:var(--brand-dark);
+  }
+
+  /* ---------------- تابات ---------------- */
+  .tabs{display:flex; gap:0; margin:14px 16px 0; border-bottom:2px solid var(--border);}
+  .tab-btn{
+    flex:1; padding:12px 8px; text-align:center; background:none; border:none;
+    font-size:14px; font-weight:600; color:var(--muted); cursor:pointer; border-bottom:3px solid transparent;
+    margin-bottom:-2px;
+  }
+  .tab-btn.active{color:var(--brand); border-bottom-color:var(--brand);}
+  .tab-panel{display:none; padding:16px; max-width:640px; margin:0 auto;}
+  .tab-panel.active{display:block;}
+
+  /* ---------------- الفورم ---------------- */
+  .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:14px;}
+  label{display:block; font-size:13px; font-weight:600; color:var(--text); margin-bottom:6px;}
+  label .en{font-weight:500; color:var(--muted); font-size:11.5px;}
+  select, textarea, input[type=number], input[type=text]{
+    width:100%; padding:11px; border:1px solid var(--border); border-radius:8px;
+    font-size:14px; font-family:inherit; margin-bottom:16px; background:#fff; color:var(--text);
+  }
+  textarea{min-height:90px; resize:vertical;}
+  .status-choice{display:flex; gap:10px; margin-bottom:18px;}
+  .status-choice label{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    border:1px solid var(--border); border-radius:8px; padding:12px 6px; cursor:pointer;
+    font-size:13px; font-weight:600; margin:0; color:var(--muted);
+  }
+  .status-choice label .en{font-size:10.5px; font-weight:500;}
+  .status-choice input{width:auto; margin:0 0 4px;}
+  .status-choice label.checked-done{border-color:#1d9e75; background:#e1f5ee; color:#0f6e56;}
+  .status-choice label.checked-progress{border-color:#ba7517; background:#faeeda; color:#854f0b;}
+  #submitBtn{
+    width:100%; padding:14px; background:var(--brand); color:#fff; border:none;
+    border-radius:8px; font-size:15px; font-weight:700; cursor:pointer;
+  }
+  #submitBtn:disabled{opacity:.6;}
+  #formMsg{text-align:center; font-size:13px; margin-top:10px; min-height:18px;}
+
+  /* ---------------- رفع الصور ---------------- */
+  .photo-upload-box{
+    border:2px dashed var(--border); border-radius:8px; padding:16px; text-align:center;
+    margin-bottom:16px; cursor:pointer; background:#fafbfa;
+  }
+  .photo-upload-box:hover{border-color:var(--brand);}
+  .photo-upload-box .icon{font-size:26px; margin-bottom:4px;}
+  .photo-upload-box .txt{font-size:13px; font-weight:600; color:var(--text);}
+  .photo-upload-box .txt .en{display:block; font-size:11px; font-weight:500; color:var(--muted); margin-top:2px;}
+  .photo-previews{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+  .photo-thumb{position:relative; width:72px; height:72px; border-radius:8px; overflow:hidden; border:1px solid var(--border);}
+  .photo-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .photo-thumb .remove-photo{
+    position:absolute; top:2px; left:2px; background:rgba(192,57,43,.9); color:#fff;
+    border:none; border-radius:50%; width:20px; height:20px; font-size:12px; line-height:20px;
+    cursor:pointer; padding:0;
+  }
+
+  /* ---------------- التقارير ---------------- */
+  .reports-toolbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
+  .reports-toolbar button{
+    padding:9px 14px; border-radius:8px; border:1px solid var(--border); background:#fff;
+    font-size:13px; font-weight:600; cursor:pointer; color:var(--text);
+  }
+  .btn-danger{color:#fff !important; background:var(--danger) !important; border-color:var(--danger) !important;}
+  .btn-primary{color:#fff !important; background:var(--brand) !important; border-color:var(--brand) !important;}
+  table{width:100%; border-collapse:collapse; background:#fff; border-radius:var(--radius); overflow:hidden; font-size:12.5px;}
+  th, td{padding:9px 8px; text-align:right; border-bottom:1px solid var(--border);}
+  th{background:var(--brand-light); color:var(--brand-dark); font-size:12px;}
+  td.status-done{color:#0f6e56; font-weight:700;}
+  td.status-progress{color:#854f0b; font-weight:700;}
+  .row-photos{display:flex; gap:4px; flex-wrap:wrap;}
+  .row-photos a{display:block; width:34px; height:34px; border-radius:5px; overflow:hidden; border:1px solid var(--border);}
+  .row-photos a img{width:100%; height:100%; object-fit:cover; display:block;}
+  .no-photo{color:var(--muted); font-size:11px;}
+  .empty-note{text-align:center; color:var(--muted); padding:30px 10px; font-size:13px;}
+  .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius);}
+  #reportsLoading{text-align:center; padding:20px; color:var(--muted); font-size:13px;}
+</style>
+</head>
+<body>
+
+  <!-- شاشة كلمة السر -->
+  <div id="lockScreen">
+    <div class="lock-header">
+      <div>
+        <div class="lock-brand-name">شركة شموع الماضي</div>
+        <div class="lock-brand-sub">Shumou Al-Madi</div>
+      </div>
+      <div class="lock-logo"><img src="logo.jpg" alt="شركة شموع الماضي"></div>
+    </div>
+    <div class="box">
+      <h2>طلبات الإصلاح والصيانة<br><span style="font-size:12px; font-weight:500; color:var(--muted);">Maintenance &amp; Repair Requests</span></h2>
+      <p>ادخل كلمة السر للدخول إلى التطبيق<br><span style="font-size:11px;">Enter password to access the app</span></p>
+      <input type="password" id="pwdInput" placeholder="كلمة السر / Password" inputmode="numeric">
+      <button id="pwdBtn" onclick="checkPassword()">دخول / Login</button>
+      <div id="lockError"></div>
+    </div>
+    <div class="lock-designer">تصميم أحمد طه — مكتب نائب الرئيس التنفيذي</div>
+  </div>
+
+  <!-- الهيدر -->
+  <header>
+    <div>
+      <div class="brand-name">شركة شموع الماضي</div>
+      <div class="brand-sub">Shumou Al-Madi</div>
+    </div>
+    <div class="logo-slot" id="logoSlot"><img src="logo.jpg" alt="شركة شموع الماضي"></div>
+  </header>
+  <div class="designer-line">تصميم أحمد طه — مكتب نائب الرئيس التنفيذي</div>
+  <div class="app-title">طلبات الإصلاح والصيانة<br><span style="font-size:13px; font-weight:500; color:var(--muted);">Maintenance &amp; Repair Requests</span></div>
+
+  <!-- التابات -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tabBtnNew" onclick="switchTab('new')">طلب جديد<br><span style="font-size:10.5px; font-weight:500;">New Request</span></button>
+    <button class="tab-btn" id="tabBtnReports" onclick="switchTab('reports')">التقارير<br><span style="font-size:10.5px; font-weight:500;">Reports</span></button>
+  </div>
+
+  <!-- تاب: طلب جديد -->
+  <div class="tab-panel active" id="panelNew">
+    <div class="card">
+      <label for="employeeName">اسم الموظف <span class="en">/ Employee Name</span></label>
+      <select id="employeeName">
+        <option value="">اختر الاسم... / Select name...</option>
+        <option value="يوسف الرشيدى">يوسف الرشيدى — Youssef Al-Roshaidy</option>
+        <option value="جمال فاضل">جمال فاضل — Gamal Fadel</option>
+      </select>
+
+      <label for="location">اسم الموقع <span class="en">/ Location</span></label>
+      <select id="location">
+        <option value="">اختر الموقع... / Select location...</option>
+        <option value="مصنع قرمشني">مصنع قرمشني — Qarmashny Factory</option>
+        <option value="مصنع الروائع">مصنع الروائع — Al Rawae' Factory</option>
+        <option value="مصنع اطايب نجد">مصنع اطايب نجد — Atayeb Najd Factory</option>
+        <option value="مصنع شعبيات">مصنع شعبيات — Shabiyat Factory</option>
+        <option value="مستودع المزرعة">مستودع المزرعة — Farm Warehouse</option>
+        <option value="سكن العمال">سكن العمال — Workers Accommodation</option>
+        <option value="مستودع التسويق">مستودع التسويق — Marketing Warehouse</option>
+        <option value="مستودع المواد الخام">مستودع المواد الخام — Raw Materials Warehouse</option>
+        <option value="المستودع العام">المستودع العام — General Warehouse</option>
+        <option value="مستودع البصر">مستودع البصر — Al Basr Warehouse</option>
+        <option value="مصنع الخرج">مصنع الخرج — Al Kharj Factory</option>
+      </select>
+
+      <label for="description">وصف العطل / الصيانة المطلوبة <span class="en">/ Fault Description</span></label>
+      <textarea id="description" placeholder="اكتب تفاصيل العطل أو الصيانة المطلوبة هنا... / Describe the issue here..."></textarea>
+
+      <label for="value">القيمة <span class="en">/ Value</span></label>
+      <input type="number" id="value" placeholder="القيمة بالريال (اختياري) / Value in SAR (optional)" min="0" step="0.01">
+
+      <label>الصور <span class="en">/ Photos</span></label>
+      <div class="photo-upload-box" onclick="document.getElementById('photoInput').click()">
+        <div class="icon">🖼️</div>
+        <div class="txt">اختر صور من الكاميرا أو الاستوديو<span class="en">Choose photos from camera or gallery</span></div>
+      </div>
+      <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotoSelect(event)">
+      <div class="photo-previews" id="photoPreviews"></div>
+
+      <label>حالة الطلب <span class="en">/ Status</span></label>
+      <div class="status-choice">
+        <label id="lblDone">
+          <input type="radio" name="status" value="تم التنفيذ" onchange="updateStatusStyle()">
+          تم التنفيذ<span class="en">Done</span>
+        </label>
+        <label id="lblProgress">
+          <input type="radio" name="status" value="جارى التنفيذ" onchange="updateStatusStyle()" checked>
+          جارى التنفيذ<span class="en">In Progress</span>
+        </label>
+      </div>
+
+      <button id="submitBtn" onclick="submitRequest()">إرسال الطلب / Submit</button>
+      <div id="formMsg"></div>
+    </div>
+  </div>
+
+  <!-- تاب: التقارير -->
+  <div class="tab-panel" id="panelReports">
+    <div class="reports-toolbar">
+      <button class="btn-primary" onclick="loadReports()">تحديث / Refresh</button>
+      <button onclick="deleteSelected()">مسح المحدد / Delete Selected</button>
+      <button class="btn-danger" onclick="deleteAll()">مسح الكل / Delete All</button>
+      <button onclick="exportExcel()">تصدير Excel / Export</button>
+    </div>
+    <div id="reportsLoading">جارى تحميل البيانات... / Loading...</div>
+    <div class="table-wrap" id="tableWrap" style="display:none;">
+      <table>
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
+            <th>الموظف<br><span style="font-weight:500;">Employee</span></th>
+            <th>التاريخ<br><span style="font-weight:500;">Date</span></th>
+            <th>الموقع<br><span style="font-weight:500;">Location</span></th>
+            <th>الوصف<br><span style="font-weight:500;">Description</span></th>
+            <th>القيمة<br><span style="font-weight:500;">Value</span></th>
+            <th>الحالة<br><span style="font-weight:500;">Status</span></th>
+            <th>الصور<br><span style="font-weight:500;">Photos</span></th>
+          </tr>
+        </thead>
+        <tbody id="reportsBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-note" id="emptyNote" style="display:none;">لا توجد طلبات مسجلة حتى الآن<br><span style="font-size:11px;">No requests yet</span></div>
+  </div>
+
+<script>
+/* =========================================================
+   ضع رابط Web App بتاع Google Apps Script هنا (ينتهي بـ /exec)
+   ========================================================= */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxD7ihO90a7rBpCImgf7gYLcdt7FHEkbBZ4r9Dkdtx5cWqMmWt1mEUFCE54NhG7oTM0/exec";
+
+let SESSION_PASSWORD = "";
+let currentRequests = [];
+let selectedPhotos = []; // {name, type, data (base64 without prefix), previewUrl}
+
+/* ---------------- كلمة السر ---------------- */
+function checkPassword(){
+  const val = document.getElementById('pwdInput').value.trim();
+  if(val !== "2023"){
+    document.getElementById('lockError').textContent = "كلمة السر غير صحيحة";
+    return;
+  }
+  SESSION_PASSWORD = val;
+  document.getElementById('lockScreen').style.display = 'none';
+}
+document.getElementById('pwdInput').addEventListener('keydown', function(e){
+  if(e.key === 'Enter') checkPassword();
+});
+
+/* ---------------- تبديل التابات ---------------- */
+function switchTab(name){
+  document.getElementById('panelNew').classList.toggle('active', name === 'new');
+  document.getElementById('panelReports').classList.toggle('active', name === 'reports');
+  document.getElementById('tabBtnNew').classList.toggle('active', name === 'new');
+  document.getElementById('tabBtnReports').classList.toggle('active', name === 'reports');
+  if(name === 'reports') loadReports();
+}
+
+/* ---------------- تلوين اختيار الحالة ---------------- */
+function updateStatusStyle(){
+  const done = document.querySelector('input[name=status][value="تم التنفيذ"]').checked;
+  document.getElementById('lblDone').classList.toggle('checked-done', done);
+  document.getElementById('lblProgress').classList.toggle('checked-progress', !done);
+}
+updateStatusStyle();
+
+/* ---------------- اختيار الصور (من الاستوديو فقط) ---------------- */
+function handlePhotoSelect(event){
+  const files = Array.from(event.target.files || []);
+  files.forEach(function(file){
+    if(!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const dataUrl = e.target.result;
+      const base64 = dataUrl.split(',')[1];
+      const photoObj = { name: file.name, type: file.type, data: base64, previewUrl: dataUrl };
+      selectedPhotos.push(photoObj);
+      renderPhotoPreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+  event.target.value = ''; // يسمح باختيار نفس الصورة تاني لو الغاها
+}
+
+function renderPhotoPreviews(){
+  const wrap = document.getElementById('photoPreviews');
+  wrap.innerHTML = '';
+  selectedPhotos.forEach(function(p, idx){
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    div.innerHTML = '<img src="' + p.previewUrl + '"><button type="button" class="remove-photo" onclick="removePhoto(' + idx + ')">×</button>';
+    wrap.appendChild(div);
+  });
+}
+
+function removePhoto(idx){
+  selectedPhotos.splice(idx, 1);
+  renderPhotoPreviews();
+}
+
+/* ---------------- نداء عام لـ Apps Script ---------------- */
+async function callApi(action, extra){
+  const payload = Object.assign({ action: action, password: SESSION_PASSWORD }, extra || {});
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+/* ---------------- إرسال طلب جديد ---------------- */
+async function submitRequest(){
+  const employeeName = document.getElementById('employeeName').value;
+  const location = document.getElementById('location').value;
+  const description = document.getElementById('description').value.trim();
+  const value = document.getElementById('value').value;
+  const statusEl = document.querySelector('input[name=status]:checked');
+  const msg = document.getElementById('formMsg');
+  const btn = document.getElementById('submitBtn');
+
+  if(!employeeName){ msg.style.color='#c0392b'; msg.textContent='من فضلك اختر اسم الموظف / Please select employee name'; return; }
+  if(!location){ msg.style.color='#c0392b'; msg.textContent='من فضلك اختر اسم الموقع / Please select a location'; return; }
+  if(!description){ msg.style.color='#c0392b'; msg.textContent='من فضلك اكتب وصف العطل أو الصيانة / Please enter a description'; return; }
+
+  btn.disabled = true;
+  msg.style.color = '#6b7570';
+  msg.textContent = 'جارى إرسال الطلب... / Sending...';
+
+  try{
+    const photosToSend = selectedPhotos.map(function(p){ return { name: p.name, type: p.type, data: p.data }; });
+    const result = await callApi('submit', {
+      data: { employeeName: employeeName, location: location, description: description, value: value, status: statusEl.value, photos: photosToSend }
+    });
+    if(result.status === 'ok'){
+      msg.style.color = '#0f6e56';
+      msg.textContent = 'تم إرسال الطلب بنجاح / Request submitted successfully';
+      document.getElementById('employeeName').value = '';
+      document.getElementById('location').value = '';
+      document.getElementById('description').value = '';
+      document.getElementById('value').value = '';
+      selectedPhotos = [];
+      renderPhotoPreviews();
+      document.querySelector('input[name=status][value="جارى التنفيذ"]').checked = true;
+      updateStatusStyle();
+    } else {
+      msg.style.color = '#c0392b';
+      msg.textContent = result.message || 'حدث خطأ أثناء الإرسال / An error occurred';
+    }
+  } catch(err){
+    msg.style.color = '#c0392b';
+    msg.textContent = 'تعذر الاتصال بالخادم. تأكد من اتصال الإنترنت.';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ---------------- تحميل التقارير ---------------- */
+async function loadReports(){
+  document.getElementById('reportsLoading').style.display = 'block';
+  document.getElementById('tableWrap').style.display = 'none';
+  document.getElementById('emptyNote').style.display = 'none';
+
+  try{
+    const result = await callApi('getAll');
+    if(result.status !== 'ok'){
+      document.getElementById('reportsLoading').textContent = result.message || 'حدث خطأ';
+      return;
+    }
+    currentRequests = result.data || [];
+    renderTable();
+  } catch(err){
+    document.getElementById('reportsLoading').textContent = 'تعذر الاتصال بالخادم';
+  }
+}
+
+function renderTable(){
+  document.getElementById('reportsLoading').style.display = 'none';
+  const body = document.getElementById('reportsBody');
+  body.innerHTML = '';
+
+  if(currentRequests.length === 0){
+    document.getElementById('emptyNote').style.display = 'block';
+    document.getElementById('tableWrap').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('tableWrap').style.display = 'block';
+  currentRequests.forEach(function(r){
+    const tr = document.createElement('tr');
+    const isDone = r.status === 'تم التنفيذ';
+    const photos = r.photos || [];
+    let photosHtml = '<span class="no-photo">—</span>';
+    if(photos.length > 0){
+      photosHtml = '<div class="row-photos">' + photos.map(function(url){
+        return '<a href="' + url + '" target="_blank"><img src="' + url + '" loading="lazy"></a>';
+      }).join('') + '</div>';
+    }
+    tr.innerHTML =
+      '<td><input type="checkbox" class="rowCheck" data-id="' + r.id + '"></td>' +
+      '<td>' + (r.employeeName || '') + '</td>' +
+      '<td>' + (r.timestamp || '') + '</td>' +
+      '<td>' + (r.location || '') + '</td>' +
+      '<td>' + (r.description || '') + '</td>' +
+      '<td>' + (r.value || '') + '</td>' +
+      '<td class="' + (isDone ? 'status-done' : 'status-progress') + '">' + (r.status || '') + '</td>' +
+      '<td>' + photosHtml + '</td>';
+    body.appendChild(tr);
+  });
+}
+
+function toggleAll(box){
+  document.querySelectorAll('.rowCheck').forEach(function(c){ c.checked = box.checked; });
+}
+
+function getSelectedIds(){
+  return Array.from(document.querySelectorAll('.rowCheck:checked')).map(function(c){ return c.dataset.id; });
+}
+
+/* ---------------- حذف المحدد / حذف الكل ---------------- */
+async function deleteSelected(){
+  const ids = getSelectedIds();
+  if(ids.length === 0){ alert('اختر طلب واحد على الأقل للحذف'); return; }
+  if(!confirm('هل أنت متأكد من مسح ' + ids.length + ' طلب؟')) return;
+  await callApi('delete', { ids: ids });
+  loadReports();
+}
+
+async function deleteAll(){
+  if(!confirm('هل أنت متأكد من مسح كل الطلبات؟ لا يمكن التراجع عن هذا الإجراء')) return;
+  await callApi('delete', { ids: 'all' });
+  loadReports();
+}
+
+/* ---------------- تصدير Excel ---------------- */
+function exportExcel(){
+  if(currentRequests.length === 0){ alert('لا توجد بيانات لتصديرها'); return; }
+  const rows = currentRequests.map(function(r){
+    return {
+      'اسم الموظف': r.employeeName,
+      'التاريخ والوقت': r.timestamp,
+      'الموقع': r.location,
+      'الوصف': r.description,
+      'القيمة': r.value,
+      'الحالة': r.status,
+      'روابط الصور': (r.photos || []).join(' | ')
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:18},{wch:18},{wch:22},{wch:40},{wch:12},{wch:14},{wch:45}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'طلبات الصيانة');
+  const today = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, 'تقرير_طلبات_الصيانة_' + today + '.xlsx');
+}
+
+/* ---------------- تسجيل الـ Service Worker ---------------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
